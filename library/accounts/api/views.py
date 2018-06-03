@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
@@ -7,14 +7,21 @@ from rest_framework.views import APIView
 
 from .serializators import (
     UserCreateSerializer,
-    UserLoginSerializer
+    UserLoginSerializer,
+    UserDetailSerializer
 )
 
 User = get_user_model()
 
 
 class UserCreateAPIView(CreateAPIView):
+    permission_classes = [AllowAny]
     serializer_class = UserCreateSerializer
+    queryset = User.objects.all()
+
+
+class UserDetailAPIView(ListAPIView):
+    serializer_class = UserDetailSerializer
     queryset = User.objects.all()
 
 

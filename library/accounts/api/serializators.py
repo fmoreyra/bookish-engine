@@ -1,4 +1,5 @@
 from django.db.models import Q
+from rest_framework_jwt.settings import api_settings
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import EmailField, CharField
 from rest_framework.serializers import ModelSerializer
@@ -103,8 +104,8 @@ class UserLoginSerializer(ModelSerializer):
             raise ValidationError("A username or Email is required to login")
 
         user = User.objects.filter(
-            Q(email=email) |
-            Q(username=username)
+            Q(email=data.get('email', None))|
+            Q(username=data.get('username', None))
         ).distinct()
         user = user.exclude(email__iexact='')
         print(user)
@@ -118,6 +119,12 @@ class UserLoginSerializer(ModelSerializer):
             if not user_obj.check_password(password):
                 raise ValidationError("Incorrect credentials, please try again.")
 
-        data['token'] = "SOME RANDOM TOKEN"
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+
+        payload = jwt_payload_handler(user_obj)
+        token = jwt_encode_handler(payload)
+
+        data['token'] = token
 
         return data
