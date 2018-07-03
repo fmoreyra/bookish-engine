@@ -26,6 +26,8 @@ class UserDetailSerializer(ModelSerializer):
 class UserCreateSerializer(ModelSerializer):
     email = EmailField(label='Email address')
     validation_email = EmailField(label='Confirm Email', write_only=True)
+    password = CharField(write_only=True, style={'input_type': 'password'})
+    validation_password = CharField(write_only=True, style={'input_type': 'password'})
 
     class Meta:
         model = User
@@ -39,9 +41,9 @@ class UserCreateSerializer(ModelSerializer):
             'id_number',
             'birth_date',
             'career',
-            'password'
+            'password',
+            'validation_password'
         ]
-        extra_kwargs = {"password": {"write_only": True}}
 
     def validate_email(self, value):
         data = self.get_initial()
@@ -51,6 +53,7 @@ class UserCreateSerializer(ModelSerializer):
             raise ValidationError("Emails must match")
 
         user_qs = User.objects.filter(email=email)
+
         if user_qs.exists():
             raise ValidationError("This user is already registered")
         return value
@@ -59,12 +62,33 @@ class UserCreateSerializer(ModelSerializer):
         data = self.get_initial()
         email = data.get("email")
         validation_email = value
+
         if email != validation_email:
             raise ValidationError("Emails must match")
+
+        return value
+
+    def validate_password(self, value):
+        data = self.get_initial()
+        password = value
+        validation_password = data.get("validation_password")
+
+        if password != validation_password:
+            raise ValidationError("Passwords must match")
+
+        return value
+
+    def validate_validation_password(self, value):
+        data = self.get_initial()
+        password = data.get("password")
+        validation_password = value
+
+        if password != validation_password:
+            raise ValidationError("Passwords must match")
+
         return value
 
     def create(self, validated_data):
-        print(validated_data)
         user_obj = User(
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
@@ -85,6 +109,7 @@ class UserLoginSerializer(ModelSerializer):
     token = CharField(allow_blank=True, read_only=True)
     username = CharField(allow_blank=True, required=False)
     email = EmailField(label='Email address', allow_blank=True, required=False)
+    password = CharField(write_only=True, style={'input_type': 'password'})
 
     class Meta:
         model = User
@@ -100,6 +125,7 @@ class UserLoginSerializer(ModelSerializer):
         email = data.get('email', None)
         username = data.get('username', None)
         password = data['password']
+
         if not email and not username:
             raise ValidationError("A username or Email is required to login")
 
@@ -108,7 +134,6 @@ class UserLoginSerializer(ModelSerializer):
             Q(username=data.get('username', None))
         ).distinct()
         user = user.exclude(email__iexact='')
-        print(user)
 
         if user.exists() and user.count() == 1:
             user_obj = user.first()
